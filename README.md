@@ -8,10 +8,10 @@ It script will help you, because it based on concept, which uses on MacOS: it sw
 
 Currently available onle python script. Maybe not the best as possible. But I want to implement the same logic on other languages:
 
-[ ] Bash
-[ ] Rust
-[ ] C
-[ ] C++
+- [ ] Bash
+- [ ] Rust
+- [ ] C
+- [ ] C++
 
 I have good knowledge only about Python and Rust languages, so implementing the logic on the other language may take more time. But, I'll glad, if you contribute it!
 
