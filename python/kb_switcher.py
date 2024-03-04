@@ -111,8 +111,9 @@ def unknown_command():
 
 
 if __name__ == "__main__":
+    if len(sys.argv) == 1: unknown_command()
+
     command, *args = sys.argv[1:]
-    print(command)
 
     match command:
         case "init": init()
