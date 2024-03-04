@@ -7,21 +7,19 @@ import json
 import time
 from typing import cast
 
-DATA_PATH = ""
 MAX_DURATION = 0.5
+
+path = os.getenv("XDG_DATA_HOME")
+if path is None:
+    path = cast(str, os.getenv("HOME")) + "/.config"
+
+DATA_PATH = path + "/layout_switcher"
+DATA_STORAGE = DATA_PATH + "/data"
 
 
 def init_path() -> None:
-    path = os.getenv("XDG_DATA_HOME")
-    if path is None:
-        path = cast(str, os.getenv("HOME")) + "/.config"
-
-    DATA_PATH = path + "/layout_switcher"
-
     if not os.path.exists(DATA_PATH):
         os.makedirs(DATA_PATH)
-
-    DATA_PATH += "/data"
 
 
 def load_layouts_from_hyprconf() -> str:
@@ -31,12 +29,12 @@ def load_layouts_from_hyprconf() -> str:
 
 
 def load_data() -> dict:
-    with open(DATA_PATH, "r") as datafile:
+    with open(DATA_STORAGE, "r") as datafile:
         return json.loads(datafile.readline())
 
 
 def dump_data(data: dict) -> None:
-    with open(DATA_PATH, "w") as datafile:
+    with open(DATA_STORAGE, "w") as datafile:
         datafile.writelines(json.dumps(data))
 
 
@@ -116,5 +114,9 @@ if __name__ == "__main__":
 
     match command:
         case "init": init()
-        case "switch": switch(args[0])
+        case "switch":
+            if len(args) == 0:
+                print("Expected device name!")
+                exit(1)
+            switch(args[0])
         case _: unknown_command()
