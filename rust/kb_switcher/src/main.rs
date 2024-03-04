@@ -46,7 +46,7 @@ struct KbSwitcherCmd {
 
 impl KbSwitcherCmd {
     fn process(&self) -> Result<(), Box<dyn Error>> {
-        match self.name.as_ref().map(|s| s.as_str()) {
+        match self.name.as_deref() {
             Some("init") => return init(),
             Some("switch") => return switch(&self.device_name),
             _ => {}
@@ -66,7 +66,7 @@ fn switch(device_name: &Option<String>) -> Result<(), Box<dyn Error>> {
     let mut data = load_data()?;
     compute_time_and_counter(press_time, &mut data);
     handle_press(&mut data, device_name)?;
-    Ok(dump_data(data)?)
+    dump_data(data)
 }
 
 fn compute_time_and_counter(press_time: f64, data: &mut Data) {
@@ -107,7 +107,7 @@ fn handle_press(data: &mut Data, device: &String) -> Result<(), Box<dyn Error>> 
     }
 
     Command::new("hyprctl")
-        .args(&[
+        .args([
             "switchxkblayout",
             device,
             &data.layouts[data.cur_freq].to_string(),
@@ -132,19 +132,19 @@ fn init() -> Result<(), Box<dyn Error>> {
     };
 
     init_path()?;
-    Ok(dump_data(data)?)
+    dump_data(data)
 }
 
 fn load_layouts_from_hyprconf() -> Result<Vec<String>, Box<dyn Error>> {
     let output = Command::new("hyprctl")
-        .args(&["getoption", "input:kb_layout", "-j"])
+        .args(["getoption", "input:kb_layout", "-j"])
         .output()?
         .stdout;
     let data: Value = serde_json::from_slice(&output).expect("Must be captured output!");
     Ok(data["str"]
         .as_str()
         .expect("The keyboard layouts must be available!")
-        .split(",")
+        .split(',')
         .map(|s| s.to_string())
         .collect())
 }
