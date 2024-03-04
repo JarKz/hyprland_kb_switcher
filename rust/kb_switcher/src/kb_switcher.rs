@@ -1,4 +1,4 @@
-use clap::Parser;
+use clap::{Parser, Subcommand};
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -37,21 +37,37 @@ struct Data {
     counter: u8,
 }
 
+/// Simple program, which can switch keyboard layout more comfotrable in Hyprland, like on MacOS.
 #[derive(Parser, Debug)]
 #[command(version, about)]
 pub struct KbSwitcherCmd {
-    name: Option<String>,
-    device_name: Option<String>,
+    #[command(subcommand)]
+    cmd: Cmd,
+}
+
+#[derive(Subcommand, Debug)]
+enum Cmd {
+    /// Initial command of kb_switcher
+    ///
+    /// Loads layouts from Hyprland config, which user uses, and stores
+    /// in data. Also initializes dump file at $XDG_DATA_HOME/layout_switcher/data
+    /// or $HOME/.local/share/layout_switcher/data.
+    ///
+    /// Must be called before `switch` command!
+    Init,
+
+    /// Switches the keyboard layouts like MacOS
+    ///
+    /// For correct work, please run firstly `init` command and do not delete the dump file!
+    Switch { device_name: String },
 }
 
 impl KbSwitcherCmd {
     pub fn process(&self) -> Result<(), Box<dyn Error>> {
-        match self.name.as_deref() {
-            Some("init") => return init(),
-            Some("switch") => return switch(&self.device_name),
-            _ => {}
+        match self.cmd {
+            Cmd::Init => init(),
+            Cmd::Switch { ref device_name } => switch(device_name),
         }
-        Ok(())
     }
 }
 
@@ -74,11 +90,7 @@ fn init() -> Result<(), Box<dyn Error>> {
     dump_data(data)
 }
 
-fn switch(device_name: &Option<String>) -> Result<(), Box<dyn Error>> {
-    let device_name = device_name
-        .as_ref()
-        .expect("Must be provided device name, when uses switch command!");
-
+fn switch(device_name: &String) -> Result<(), Box<dyn Error>> {
     let press_time = std::time::SystemTime::now()
         .duration_since(UNIX_EPOCH)?
         .as_secs_f64();
