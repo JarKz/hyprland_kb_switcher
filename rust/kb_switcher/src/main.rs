@@ -25,6 +25,8 @@ static DATA_STORAGE: Lazy<PathBuf> = Lazy::new(|| {
     other_path
 });
 
+const MAX_DURATION: f64 = 0.5;
+
 #[derive(Serialize, Deserialize)]
 struct Data {
     last_time: f64,
@@ -43,15 +45,75 @@ struct KbSwitcherCmd {
 }
 
 impl KbSwitcherCmd {
-    fn process(&mut self) -> Result<(), Box<dyn Error>> {
+    fn process(&self) -> Result<(), Box<dyn Error>> {
         match self.name.as_ref().map(|s| s.as_str()) {
             Some("init") => return init(),
-            Some("switch") => {}
-            None => {}
-            other => {}
+            Some("switch") => return switch(&self.device_name),
+            _ => {}
         }
         Ok(())
     }
+}
+
+fn switch(device_name: &Option<String>) -> Result<(), Box<dyn Error>> {
+    let device_name = device_name
+        .as_ref()
+        .expect("Must be provided device name, when uses switch command!");
+
+    let press_time = std::time::SystemTime::now()
+        .duration_since(UNIX_EPOCH)?
+        .as_secs_f64();
+    let mut data = load_data()?;
+    compute_time_and_counter(press_time, &mut data);
+    handle_press(&mut data, device_name)?;
+    Ok(dump_data(data)?)
+}
+
+fn compute_time_and_counter(press_time: f64, data: &mut Data) {
+    let diff = press_time - data.last_time;
+    data.last_time = press_time;
+
+    data.sum_time += diff;
+
+    if data.sum_time < MAX_DURATION {
+        data.counter += 1;
+    } else {
+        data.sum_time = 0.0;
+        data.counter = 1;
+    }
+
+    if data.counter >= 2 {
+        data.sum_time = 0.0;
+    }
+}
+
+fn handle_press(data: &mut Data, device: &String) -> Result<(), Box<dyn Error>> {
+    if data.counter <= 1 {
+        data.cur_freq = (data.cur_freq + 1) % 2;
+    } else {
+        data.cur_all = if data.counter > 2 {
+            data.cur_all + 1
+        } else {
+            2
+        };
+        data.cur_all %= data.layouts.len();
+
+        if data.cur_all == data.cur_freq {
+            data.cur_all += 1;
+        }
+
+        (data.layouts[data.cur_all], data.layouts[data.cur_freq]) =
+            (data.layouts[data.cur_freq], data.layouts[data.cur_all]);
+    }
+
+    Command::new("hyprctl")
+        .args(&[
+            "switchxkblayout",
+            device,
+            &data.layouts[data.cur_freq].to_string(),
+        ])
+        .output()?;
+    Ok(())
 }
 
 fn init() -> Result<(), Box<dyn Error>> {
@@ -70,14 +132,7 @@ fn init() -> Result<(), Box<dyn Error>> {
     };
 
     init_path()?;
-    let mut file = std::fs::File::create(&*DATA_STORAGE)?;
-    file.write_all(
-        serde_json::to_string(&data)
-            .expect("Something wrong happened when serializes from Data to string")
-            .as_bytes(),
-    )?;
-
-    Ok(())
+    Ok(dump_data(data)?)
 }
 
 fn load_layouts_from_hyprconf() -> Result<Vec<String>, Box<dyn Error>> {
@@ -99,8 +154,23 @@ fn init_path() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
+fn dump_data(data: Data) -> Result<(), Box<dyn Error>> {
+    let mut file = std::fs::File::create(&*DATA_STORAGE)?;
+    Ok(file.write_all(
+        serde_json::to_string(&data)
+            .expect("Something wrong happened when serializes from Data to string")
+            .as_bytes(),
+    )?)
+}
+
+fn load_data() -> Result<Data, Box<dyn Error>> {
+    let file = std::fs::File::open(&*DATA_STORAGE)?;
+    let reader = std::io::BufReader::new(file);
+    Ok(serde_json::from_reader(reader)?)
+}
+
 fn main() -> Result<(), Box<dyn Error>> {
-    let mut command = KbSwitcherCmd::parse();
+    let command = KbSwitcherCmd::parse();
     command.process()?;
     Ok(())
 }
