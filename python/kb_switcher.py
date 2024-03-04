@@ -104,7 +104,9 @@ def switch(device: str):
 
 
 def unknown_command():
-    print("Unknown command!")
+    print("""Unknown command! Currently possible only two commands:
+        init – initializes storage file with current layouts.
+        switch <dev_name> – switches keyboard layout (languages) for specific the <dev_name> device name aka keyboard.""")
     exit(1)
 
 
