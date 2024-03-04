@@ -1,34 +1,62 @@
-#!/bin/python3
+#!/usr/bin/python3
 
 import os
-import json
+import sys
 import subprocess
+import json
 import time
 from typing import cast
 
+DATA_PATH = ""
 MAX_DURATION = 0.5
-DEVICE = "keychron-keychron-k3"
-PATH = os.getenv("XDG_DATA_HOME")
-if PATH is None:
-    PATH = cast(str, os.getenv("HOME")) + "/.config"
-
-DATA_PATH = PATH + "/layout_switcher/data"
 
 
-def swap(array: list[int], first: int, last: int) -> None:
-    array[first], array[last] = array[last], array[first]
+def init_path() -> None:
+    path = os.getenv("XDG_DATA_HOME")
+    if path is None:
+        path = cast(str, os.getenv("HOME")) + "/.config"
+
+    DATA_PATH = path + "/layout_switcher"
+
+    if not os.path.exists(DATA_PATH):
+        os.makedirs(DATA_PATH)
+
+    DATA_PATH += "/data"
 
 
-def get_data() -> dict:
-    data: dict
+def load_layouts_from_hyprconf() -> str:
+    data_about_layouts = subprocess.run(
+        ["hyprctl", "getoption", "input:kb_layout", "-j"], capture_output=True)
+    return json.loads(data_about_layouts.stdout)["str"].split(',')
+
+
+def load_data() -> dict:
     with open(DATA_PATH, "r") as datafile:
-        data = json.loads(datafile.readline())
-    return data
+        return json.loads(datafile.readline())
 
 
 def dump_data(data: dict) -> None:
     with open(DATA_PATH, "w") as datafile:
         datafile.writelines(json.dumps(data))
+
+
+def init():
+    init_path()
+    layouts = load_layouts_from_hyprconf()
+    data = {
+        "last_time": time.time(),
+        "layouts": list(range(len(layouts))),
+        "cur_freq": 0,
+        "cur_all": 0,
+        "sum_time": 0,
+        "counter": 0,
+    }
+
+    dump_data(data)
+
+
+def swap(array: list[int], first: int, last: int) -> None:
+    array[first], array[last] = array[last], array[first]
 
 
 def compute_time_and_counter(press_time: float, data: dict) -> None:
@@ -47,7 +75,7 @@ def compute_time_and_counter(press_time: float, data: dict) -> None:
         data["sum_time"] = 0
 
 
-def handle_press(data: dict) -> None:
+def handle_press(data: dict, device: str) -> None:
     layouts = data["layouts"]
     cur_freq = data["cur_freq"]
     counter = data["counter"]
@@ -64,14 +92,29 @@ def handle_press(data: dict) -> None:
         data["cur_all"] = cur_all
         swap(layouts, cur_freq, cur_all)
 
-    subprocess.run(["hyprctl", "switchxkblayout", DEVICE,
+    subprocess.run(["hyprctl", "switchxkblayout", device,
                    str(layouts[cur_freq])], capture_output=True)
     data["cur_freq"] = cur_freq
 
 
-if __name__ == "__main__":
+def switch(device: str):
     press_time = time.time()
-    data = get_data()
+    data = load_data()
     compute_time_and_counter(press_time, data)
-    handle_press(data)
+    handle_press(data, device)
     dump_data(data)
+
+
+def unknown_command():
+    print("Unknown command!")
+    exit(1)
+
+
+if __name__ == "__main__":
+    command, *args = sys.argv[1:]
+    print(command)
+
+    match command:
+        case "init": init()
+        case "switch": switch(args[0])
+        case _: unknown_command()
