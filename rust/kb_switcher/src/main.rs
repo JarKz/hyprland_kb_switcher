@@ -45,39 +45,39 @@ struct KbSwitcherCmd {
 impl KbSwitcherCmd {
     fn process(&mut self) -> Result<(), Box<dyn Error>> {
         match self.name.as_ref().map(|s| s.as_str()) {
-            Some("init") => return self.init(),
+            Some("init") => return init(),
             Some("switch") => {}
             None => {}
             other => {}
         }
         Ok(())
     }
+}
 
-    fn init(&mut self) -> Result<(), Box<dyn Error>> {
-        let layouts = load_layouts_from_hyprconf()?;
-        let time = std::time::SystemTime::now()
-            .duration_since(UNIX_EPOCH)?
-            .as_secs_f64();
+fn init() -> Result<(), Box<dyn Error>> {
+    let layouts = load_layouts_from_hyprconf()?;
+    let time = std::time::SystemTime::now()
+        .duration_since(UNIX_EPOCH)?
+        .as_secs_f64();
 
-        let data = Data {
-            last_time: time,
-            layouts: (0..layouts.len()).collect(),
-            cur_freq: 0,
-            cur_all: 0,
-            sum_time: 0.0,
-            counter: 0,
-        };
+    let data = Data {
+        last_time: time,
+        layouts: (0..layouts.len()).collect(),
+        cur_freq: 0,
+        cur_all: 0,
+        sum_time: 0.0,
+        counter: 0,
+    };
 
-        init_path()?;
-        let mut file = std::fs::File::create(&*DATA_STORAGE)?;
-        file.write_all(
-            serde_json::to_string(&data)
-                .expect("Something wrong happened when serializes from Data to string")
-                .as_bytes(),
-        )?;
+    init_path()?;
+    let mut file = std::fs::File::create(&*DATA_STORAGE)?;
+    file.write_all(
+        serde_json::to_string(&data)
+            .expect("Something wrong happened when serializes from Data to string")
+            .as_bytes(),
+    )?;
 
-        Ok(())
-    }
+    Ok(())
 }
 
 fn load_layouts_from_hyprconf() -> Result<Vec<String>, Box<dyn Error>> {
