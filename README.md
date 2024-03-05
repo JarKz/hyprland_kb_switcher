@@ -9,7 +9,7 @@ It script will help you, because it based on concept, which uses on MacOS: it sw
 Currently available onle python script. Maybe not the best as possible. But I want to implement the same logic on other languages:
 
 - [ ] Bash
-- [ ] Rust
+- [X] Rust
 - [ ] C
 - [ ] C++
 
