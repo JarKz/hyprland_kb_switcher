@@ -38,35 +38,43 @@ struct Data {
     counter: u8,
 }
 
-/// Simple program, which can switch keyboard layout more comfotrable in Hyprland, like on MacOS.
+/// Simple program, which can switch keyboard layout more comfotrable
+/// in Hyprland, like on MacOS.
 #[derive(Parser, Debug)]
 #[command(version, about)]
 pub enum KbSwitcherCmd {
-    /// Initial command of kb_switcher
+    /// Initializes storage data with device names.
     ///
-    /// Loads layouts from Hyprland config, which user uses, and stores
-    /// in data. Also initializes dump file at $XDG_DATA_HOME/layout_switcher/data
-    /// or $HOME/.local/share/layout_switcher/data.
+    /// Also captures current time, loads layouts from hyprland.conf,
+    /// and stores in file named "data", which is placed at
+    /// $XDG_DATA_HOME/kb_switcher/data or $HOME/.local/share/kb_switcher/data.
     ///
-    /// Must be called before `switch` command!
-    Init {
-        devices: Vec<String>,
-    },
+    /// Must be called before all the other commands!
+    Init { devices: Vec<String> },
 
+    /// Updates layouts in the data file without other actions.
+    ///
+    /// Uses, when you change the layout set in hyprland.conf.
     UpdateLayouts,
 
-    /// Switches the keyboard layouts like MacOS
+    /// Switches the keyboard layouts like MacOS.
     ///
-    /// For correct work, please run firstly `init` command and do not delete the dump file!
+    /// Switches the layouts for all devices, which you added in
+    /// 'init' or 'add-device' command.
     Switch,
 
-    AddDevice {
-        device_name: String,
-    },
+    /// Adds a device into data file.
+    ///
+    /// Note: the device name must be correct. You can get the name
+    /// using command 'hyprctl devices'.
+    AddDevice { device_name: String },
 
-    RemoveDevice {
-        device_name: String,
-    },
+    /// Removes matching device from data file.
+    ///
+    /// Note: the device must be correct. You can get the name from
+    /// file, which is placed at $XDG_DATA_HOME/kb_switcher/data
+    /// or $HOME/.local/share/kb_switcher/data.
+    RemoveDevice { device_name: String },
 }
 
 impl KbSwitcherCmd {
