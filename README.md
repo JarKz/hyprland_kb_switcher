@@ -41,6 +41,25 @@ For example:
 
 I know about batching, which `hyprctl` provides, but it very-very expensive call for all devices, so I decline it.
 
+## Usage
+
+Firstly, make sure that you have last updated rust tools. You can download it from official site, or update to last version using command:
+
+```bash
+rustup update
+```
+
+And install application using command:
+
+```bash
+cargo install --path .
+```
+
+And enjoy with application!
+
+> __NOTE__
+> If you want set another name of application, you can change it in Cargo.toml file: rename the package name, which placet at second line from top.
+
 ## Contribution
 
 If you have some issues, or have better implementation, that I have, I'm open to contribution! Open issue or make PR, if you sure about problem.
