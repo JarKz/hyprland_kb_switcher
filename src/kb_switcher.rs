@@ -1,4 +1,4 @@
-use clap::{Parser, Subcommand};
+use clap::Parser;
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -41,13 +41,7 @@ struct Data {
 /// Simple program, which can switch keyboard layout more comfotrable in Hyprland, like on MacOS.
 #[derive(Parser, Debug)]
 #[command(version, about)]
-pub struct KbSwitcherCmd {
-    #[command(subcommand)]
-    cmd: Cmd,
-}
-
-#[derive(Subcommand, Debug)]
-enum Cmd {
+pub enum KbSwitcherCmd {
     /// Initial command of kb_switcher
     ///
     /// Loads layouts from Hyprland config, which user uses, and stores
@@ -65,9 +59,9 @@ enum Cmd {
 
 impl KbSwitcherCmd {
     pub fn process(&self) -> Result<(), Box<dyn Error>> {
-        match self.cmd {
-            Cmd::Init { ref devices } => init(devices),
-            Cmd::Switch => switch(),
+        match self {
+            KbSwitcherCmd::Init { ref devices } => init(devices),
+            KbSwitcherCmd::Switch => switch(),
         }
     }
 }
