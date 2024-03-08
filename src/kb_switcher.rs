@@ -49,19 +49,31 @@ pub enum KbSwitcherCmd {
     /// or $HOME/.local/share/layout_switcher/data.
     ///
     /// Must be called before `switch` command!
-    Init { devices: Vec<String> },
+    Init {
+        devices: Vec<String>,
+    },
 
     /// Switches the keyboard layouts like MacOS
     ///
     /// For correct work, please run firstly `init` command and do not delete the dump file!
     Switch,
+
+    AddDevice {
+        device_name: String,
+    },
+
+    RemoveDevice {
+        device_name: String,
+    },
 }
 
 impl KbSwitcherCmd {
     pub fn process(&self) -> Result<(), Box<dyn Error>> {
         match self {
-            KbSwitcherCmd::Init { ref devices } => init(devices),
+            KbSwitcherCmd::Init { devices } => init(devices),
             KbSwitcherCmd::Switch => switch(),
+            KbSwitcherCmd::AddDevice { device_name } => add_device(device_name),
+            KbSwitcherCmd::RemoveDevice { device_name } => remove_device(device_name),
         }
     }
 }
@@ -106,6 +118,30 @@ fn switch() -> Result<(), Box<dyn Error>> {
         child?.wait()?;
     }
     Ok(())
+}
+
+fn add_device(device_name: &String) -> Result<(), Box<dyn Error>> {
+    let mut data = load_data()?;
+    data.devices.push(device_name.clone());
+    dump_data(data)
+}
+
+fn remove_device(device_name: &String) -> Result<(), Box<dyn Error>> {
+    let mut data = load_data()?;
+
+    match data
+        .devices
+        .iter()
+        .enumerate()
+        .find(|(_, dev)| *dev == device_name)
+    {
+        Some((i, _)) => {
+            data.devices.remove(i);
+        }
+        None => (),
+    }
+
+    dump_data(data)
 }
 
 fn compute_time_and_counter(press_time: f64, data: &mut Data) {
