@@ -101,11 +101,17 @@ fn switch() -> Result<(), Box<dyn Error>> {
     handle_press(&mut data);
 
     let layout_id = data.layouts[data.cur_freq];
+    let mut tasks = Vec::with_capacity(data.devices.len());
     for dev_name in &data.devices {
-        switch_layout_for(dev_name, layout_id)?;
+        tasks.push(switch_layout_for(dev_name.clone(), layout_id));
     }
 
-    dump_data(data)
+    dump_data(data)?;
+
+    for task in tasks {
+        task.join().expect("Couldn't join to this thread!")?;
+    }
+    Ok(())
 }
 
 fn compute_time_and_counter(press_time: f64, data: &mut Data) {
@@ -146,15 +152,15 @@ fn handle_press(data: &mut Data) {
     }
 }
 
-fn switch_layout_for(device: &String, layout_id: usize) -> Result<(), Box<dyn Error>> {
-    Command::new("hyprctl")
-        .args([
-            "switchxkblayout",
-            device,
-            &layout_id.to_string(),
-        ])
-        .output()?;
-    Ok(())
+fn switch_layout_for(
+    device: String,
+    layout_id: usize,
+) -> std::thread::JoinHandle<Result<std::process::Child, std::io::Error>> {
+    std::thread::spawn(move || {
+        Command::new("hyprctl")
+            .args(["switchxkblayout", &device, &layout_id.to_string()])
+            .spawn()
+    })
 }
 
 fn load_layouts_from_hyprconf() -> Result<Vec<String>, Box<dyn Error>> {
