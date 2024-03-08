@@ -15,7 +15,7 @@ static DATA_PATH: Lazy<PathBuf> = Lazy::new(|| {
             other_path
         }
     };
-    data_path.push("layout_switcher");
+    data_path.push("kb_switcher");
     data_path
 });
 
