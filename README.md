@@ -41,18 +41,6 @@ For example:
 
 I know about batching, which `hyprctl` provides, but it very-very expensive call for all devices, so I decline it.
 
-## Variants
-
-The languages, on which the scripts currently implemented:
-
-- [X] Python
-- [ ] Bash
-- [X] Rust
-- [ ] C
-- [ ] C++
-
-I have good knowledge only about Python and Rust languages, so implementing the logic on the other language may take more time. But, I'll glad, if you'll help with it!
-
 ## Contribution
 
 If you have some issues, or have better implementation, that I have, I'm open to contribution! Open issue or make PR, if you sure about problem.
