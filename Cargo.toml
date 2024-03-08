@@ -1,5 +1,5 @@
 [package]
-name = "hyprland_kb_switcher"
+name = "kb_switcher"
 version = "0.1.0"
 edition = "2021"
 
