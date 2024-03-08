@@ -66,7 +66,7 @@ enum Cmd {
 impl KbSwitcherCmd {
     pub fn process(&self) -> Result<(), Box<dyn Error>> {
         match self.cmd {
-            Cmd::Init {ref devices} => init(devices),
+            Cmd::Init { ref devices } => init(devices),
             Cmd::Switch => switch(),
         }
     }
@@ -101,15 +101,15 @@ fn switch() -> Result<(), Box<dyn Error>> {
     handle_press(&mut data);
 
     let layout_id = data.layouts[data.cur_freq];
-    let mut tasks = Vec::with_capacity(data.devices.len());
+    let mut childs = Vec::with_capacity(data.devices.len());
     for dev_name in &data.devices {
-        tasks.push(switch_layout_for(dev_name.clone(), layout_id));
+        childs.push(switch_layout_for(dev_name.clone(), layout_id));
     }
 
     dump_data(data)?;
 
-    for task in tasks {
-        task.join().expect("Couldn't join to this thread!")?;
+    for child in childs {
+        child?.wait()?;
     }
     Ok(())
 }
@@ -155,12 +155,10 @@ fn handle_press(data: &mut Data) {
 fn switch_layout_for(
     device: String,
     layout_id: usize,
-) -> std::thread::JoinHandle<Result<std::process::Child, std::io::Error>> {
-    std::thread::spawn(move || {
-        Command::new("hyprctl")
-            .args(["switchxkblayout", &device, &layout_id.to_string()])
-            .spawn()
-    })
+) -> Result<std::process::Child, std::io::Error> {
+    Command::new("hyprctl")
+        .args(["switchxkblayout", &device, &layout_id.to_string()])
+        .spawn()
 }
 
 fn load_layouts_from_hyprconf() -> Result<Vec<String>, Box<dyn Error>> {
