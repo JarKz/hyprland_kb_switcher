@@ -86,7 +86,7 @@ fn init() -> Result<(), Box<dyn Error>> {
         counter: 0,
     };
 
-    init_path()?;
+    std::fs::create_dir_all(&*DATA_PATH)?;
     dump_data(data)
 }
 
@@ -159,11 +159,6 @@ fn load_layouts_from_hyprconf() -> Result<Vec<String>, Box<dyn Error>> {
         .split(',')
         .map(|s| s.to_string())
         .collect())
-}
-
-fn init_path() -> Result<(), Box<dyn Error>> {
-    std::fs::create_dir_all(&*DATA_PATH)?;
-    Ok(())
 }
 
 fn dump_data(data: Data) -> Result<(), Box<dyn Error>> {
