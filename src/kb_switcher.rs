@@ -29,6 +29,7 @@ const MAX_DURATION: f64 = 0.5;
 
 #[derive(Serialize, Deserialize)]
 struct Data {
+    devices: Vec<String>,
     last_time: f64,
     layouts: Vec<usize>,
     cur_freq: usize,
@@ -54,30 +55,31 @@ enum Cmd {
     /// or $HOME/.local/share/layout_switcher/data.
     ///
     /// Must be called before `switch` command!
-    Init,
+    Init { devices: Vec<String> },
 
     /// Switches the keyboard layouts like MacOS
     ///
     /// For correct work, please run firstly `init` command and do not delete the dump file!
-    Switch { device_name: String },
+    Switch,
 }
 
 impl KbSwitcherCmd {
     pub fn process(&self) -> Result<(), Box<dyn Error>> {
         match self.cmd {
-            Cmd::Init => init(),
-            Cmd::Switch { ref device_name } => switch(device_name),
+            Cmd::Init {ref devices} => init(devices),
+            Cmd::Switch => switch(),
         }
     }
 }
 
-fn init() -> Result<(), Box<dyn Error>> {
+fn init(devices: &Vec<String>) -> Result<(), Box<dyn Error>> {
     let layouts = load_layouts_from_hyprconf()?;
     let time = std::time::SystemTime::now()
         .duration_since(UNIX_EPOCH)?
         .as_secs_f64();
 
     let data = Data {
+        devices: devices.clone(),
         last_time: time,
         layouts: (0..layouts.len()).collect(),
         cur_freq: 0,
@@ -90,13 +92,19 @@ fn init() -> Result<(), Box<dyn Error>> {
     dump_data(data)
 }
 
-fn switch(device_name: &String) -> Result<(), Box<dyn Error>> {
+fn switch() -> Result<(), Box<dyn Error>> {
     let press_time = std::time::SystemTime::now()
         .duration_since(UNIX_EPOCH)?
         .as_secs_f64();
     let mut data = load_data()?;
     compute_time_and_counter(press_time, &mut data);
-    handle_press(&mut data, device_name)?;
+    handle_press(&mut data);
+
+    let layout_id = data.layouts[data.cur_freq];
+    for dev_name in &data.devices {
+        switch_layout_for(dev_name, layout_id)?;
+    }
+
     dump_data(data)
 }
 
@@ -118,7 +126,7 @@ fn compute_time_and_counter(press_time: f64, data: &mut Data) {
     }
 }
 
-fn handle_press(data: &mut Data, device: &String) -> Result<(), Box<dyn Error>> {
+fn handle_press(data: &mut Data) {
     if data.counter <= 1 {
         data.cur_freq = (data.cur_freq + 1) % 2;
     } else {
@@ -136,12 +144,14 @@ fn handle_press(data: &mut Data, device: &String) -> Result<(), Box<dyn Error>> 
         (data.layouts[data.cur_all], data.layouts[data.cur_freq]) =
             (data.layouts[data.cur_freq], data.layouts[data.cur_all]);
     }
+}
 
+fn switch_layout_for(device: &String, layout_id: usize) -> Result<(), Box<dyn Error>> {
     Command::new("hyprctl")
         .args([
             "switchxkblayout",
             device,
-            &data.layouts[data.cur_freq].to_string(),
+            &layout_id.to_string(),
         ])
         .output()?;
     Ok(())
