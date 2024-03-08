@@ -53,6 +53,8 @@ pub enum KbSwitcherCmd {
         devices: Vec<String>,
     },
 
+    UpdateLayouts,
+
     /// Switches the keyboard layouts like MacOS
     ///
     /// For correct work, please run firstly `init` command and do not delete the dump file!
@@ -71,6 +73,7 @@ impl KbSwitcherCmd {
     pub fn process(&self) -> Result<(), Box<dyn Error>> {
         match self {
             KbSwitcherCmd::Init { devices } => init(devices),
+            KbSwitcherCmd::UpdateLayouts => update_layouts(),
             KbSwitcherCmd::Switch => switch(),
             KbSwitcherCmd::AddDevice { device_name } => add_device(device_name),
             KbSwitcherCmd::RemoveDevice { device_name } => remove_device(device_name),
@@ -95,6 +98,13 @@ fn init(devices: &Vec<String>) -> Result<(), Box<dyn Error>> {
     };
 
     std::fs::create_dir_all(&*DATA_PATH)?;
+    dump_data(data)
+}
+
+fn update_layouts() -> Result<(), Box<dyn Error>> {
+    let layouts = load_layouts_from_hyprconf()?;
+    let mut data = load_data()?;
+    data.layouts = (0..layouts.len()).collect();
     dump_data(data)
 }
 
