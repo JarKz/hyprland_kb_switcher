@@ -83,7 +83,7 @@ pub enum KbSwitcherCmd {
         device_name: String,
     },
 
-    // Generate shell completion script
+    /// Generate shell completion script
     Completion {
         shell: Option<Shell>,
     },
