@@ -51,9 +51,7 @@ pub enum KbSwitcherCmd {
     /// $XDG_DATA_HOME/kb_switcher/data or $HOME/.local/share/kb_switcher/data.
     ///
     /// Must be called before all the other commands!
-    Init {
-        devices: Vec<String>,
-    },
+    Init { devices: Vec<String> },
 
     /// Updates layouts in the data file without other actions.
     ///
@@ -70,23 +68,17 @@ pub enum KbSwitcherCmd {
     ///
     /// Note: the device name must be correct. You can get the name
     /// using command 'hyprctl devices'.
-    AddDevice {
-        device_name: String,
-    },
+    AddDevice { device_name: String },
 
     /// Removes matching device from data file.
     ///
     /// Note: the device must be correct. You can get the name from
     /// file, which is placed at $XDG_DATA_HOME/kb_switcher/data
     /// or $HOME/.local/share/kb_switcher/data.
-    RemoveDevice {
-        device_name: String,
-    },
+    RemoveDevice { device_name: String },
 
     /// Generate shell completion script
-    Completion {
-        shell: Option<Shell>,
-    },
+    Completion { shell: Option<Shell> },
 }
 
 impl KbSwitcherCmd {
