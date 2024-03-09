@@ -97,19 +97,22 @@ impl KbSwitcherCmd {
             KbSwitcherCmd::Switch => switch(),
             KbSwitcherCmd::AddDevice { device_name } => add_device(device_name),
             KbSwitcherCmd::RemoveDevice { device_name } => remove_device(device_name),
-            KbSwitcherCmd::Completion { shell } => Ok(print_completion(shell)),
+            KbSwitcherCmd::Completion { shell } => {
+                print_completion(shell);
+                Ok(())
+            }
         }
     }
 }
 
-fn init(devices: &Vec<String>) -> Result<(), Box<dyn Error>> {
+fn init(devices: &[String]) -> Result<(), Box<dyn Error>> {
     let layouts = load_layouts_from_hyprconf()?;
     let time = std::time::SystemTime::now()
         .duration_since(UNIX_EPOCH)?
         .as_secs_f64();
 
     let data = Data {
-        devices: devices.clone(),
+        devices: devices.to_owned(),
         last_time: time,
         layouts: (0..layouts.len()).collect(),
         cur_freq: 0,
@@ -173,16 +176,13 @@ fn add_device(device_name: &String) -> Result<(), Box<dyn Error>> {
 fn remove_device(device_name: &String) -> Result<(), Box<dyn Error>> {
     let mut data = load_data()?;
 
-    match data
+    if let Some((i, _)) = data
         .devices
         .iter()
         .enumerate()
         .find(|(_, dev)| *dev == device_name)
     {
-        Some((i, _)) => {
-            data.devices.remove(i);
-        }
-        None => (),
+        data.devices.remove(i);
     }
 
     dump_data(data)
@@ -269,7 +269,7 @@ fn load_keyboards() -> Result<Vec<String>, Box<dyn Error>> {
     let keyboards: Vec<String> = data["keyboards"]
         .as_array()
         .expect("Must be array of keyboards!")
-        .into_iter()
+        .iter()
         .map(|keyboard| {
             keyboard["name"]
                 .as_str()
