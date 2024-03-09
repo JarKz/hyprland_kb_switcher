@@ -1,6 +1,7 @@
 mod kb_switcher;
-use clap::Parser;
 use kb_switcher::KbSwitcherCmd;
+
+use clap::Parser;
 use std::error::Error;
 
 fn main() -> Result<(), Box<dyn Error>> {
