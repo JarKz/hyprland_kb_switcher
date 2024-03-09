@@ -64,13 +64,13 @@ pub enum KbSwitcherCmd {
     /// 'init' or 'add-device' command.
     Switch,
 
-    /// Adds a device into data file.
+    /// Adds a device into the data file.
     ///
-    /// Note: the device name must be correct. You can get the name
-    /// using command 'hyprctl devices'.
+    /// Note: the device name must be correct, otherwise it won't add's into file.
+    /// You can get the name using command 'hyprctl devices'.
     AddDevice { device_name: String },
 
-    /// Removes matching device from data file.
+    /// Removes matching device from the data file.
     ///
     /// Note: the device must be correct. You can get the name from
     /// file, which is placed at $XDG_DATA_HOME/kb_switcher/data
