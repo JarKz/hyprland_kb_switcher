@@ -153,6 +153,19 @@ fn switch() -> Result<(), Box<dyn Error>> {
 
 fn add_device(device_name: &String) -> Result<(), Box<dyn Error>> {
     let mut data = load_data()?;
+    let available_keyboards = load_keyboards()?;
+
+    if !available_keyboards.contains(device_name) {
+        eprintln!(
+            "The given keyboard name is incorrect! Available keyboards: {}",
+            available_keyboards
+                .iter()
+                .map(|keyboard| "\n- ".to_string() + keyboard)
+                .collect::<String>()
+        );
+        std::process::exit(1);
+    }
+
     data.devices.push(device_name.clone());
     dump_data(data)
 }
@@ -245,6 +258,26 @@ fn load_layouts_from_hyprconf() -> Result<Vec<String>, Box<dyn Error>> {
         .split(',')
         .map(|s| s.to_string())
         .collect())
+}
+
+fn load_keyboards() -> Result<Vec<String>, Box<dyn Error>> {
+    let output = Command::new("hyprctl")
+        .args(["devices", "-j"])
+        .output()?
+        .stdout;
+    let data: Value = serde_json::from_slice(&output).expect("Must be captured output!");
+    let keyboards: Vec<String> = data["keyboards"]
+        .as_array()
+        .expect("Must be array of keyboards!")
+        .into_iter()
+        .map(|keyboard| {
+            keyboard["name"]
+                .as_str()
+                .expect("The keyboard name must be string!")
+                .to_string()
+        })
+        .collect();
+    Ok(keyboards)
 }
 
 fn dump_data(data: Data) -> Result<(), Box<dyn Error>> {
