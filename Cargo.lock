@@ -73,6 +73,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "clap_complete"
+version = "4.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "885e4d7d5af40bfb99ae6f9433e292feac98d452dcb3ec3d25dfe7552b77da8c"
+dependencies = [
+ "clap",
+]
+
+[[package]]
 name = "clap_derive"
 version = "4.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -110,9 +119,10 @@ checksum = "b1a46d1a171d865aa5f83f92695765caa047a9b4cbae2cbf37dbd613a793fd4c"
 
 [[package]]
 name = "kb_switcher"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "clap",
+ "clap_complete",
  "once_cell",
  "serde",
  "serde_json",
