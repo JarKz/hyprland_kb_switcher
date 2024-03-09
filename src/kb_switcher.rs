@@ -72,10 +72,11 @@ pub enum KbSwitcherCmd {
 
     /// Removes matching device from the data file.
     ///
-    /// Note: the device must be correct. You can get the name from
-    /// file, which is placed at $XDG_DATA_HOME/kb_switcher/data
-    /// or $HOME/.local/share/kb_switcher/data.
+    /// You get the device name using command 'list-devices'.
     RemoveDevice { device_name: String },
+
+    /// Prints all stored device names.
+    ListDevices,
 
     /// Generate shell completion script
     Completion { shell: Option<Shell> },
@@ -89,6 +90,7 @@ impl KbSwitcherCmd {
             KbSwitcherCmd::Switch => switch(),
             KbSwitcherCmd::AddDevice { device_name } => add_device(device_name),
             KbSwitcherCmd::RemoveDevice { device_name } => remove_device(device_name),
+            KbSwitcherCmd::ListDevices => list_devices(),
             KbSwitcherCmd::Completion { shell } => {
                 print_completion(shell);
                 Ok(())
@@ -179,6 +181,18 @@ fn remove_device(device_name: &String) -> std::io::Result<()> {
         data.devices.remove(i);
         dump_data(data)?;
     }
+    Ok(())
+}
+
+fn list_devices() -> std::io::Result<()> {
+    let data = load_data()?;
+    println!(
+        "Current stored devices:{}",
+        data.devices
+            .iter()
+            .map(|device| "\n - ".to_string() + device)
+            .collect::<String>()
+    );
     Ok(())
 }
 
