@@ -177,9 +177,9 @@ fn remove_device(device_name: &String) -> std::io::Result<()> {
         .find(|(_, dev)| *dev == device_name)
     {
         data.devices.remove(i);
+        dump_data(data)?;
     }
-
-    dump_data(data)
+    Ok(())
 }
 
 fn print_completion(shell: &Option<Shell>) {
