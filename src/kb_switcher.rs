@@ -3,7 +3,7 @@ use clap_complete::{generate, Shell};
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use std::{error::Error, io::Write, path::PathBuf, process::Command, time::UNIX_EPOCH};
+use std::{io::Write, path::PathBuf, process::Command, time::UNIX_EPOCH};
 
 static DATA_PATH: Lazy<PathBuf> = Lazy::new(|| {
     let mut data_path = match std::env::var("XDG_DATA_HOME") {
@@ -90,7 +90,7 @@ pub enum KbSwitcherCmd {
 }
 
 impl KbSwitcherCmd {
-    pub fn process(&self) -> Result<(), Box<dyn Error>> {
+    pub fn process(&self) -> std::io::Result<()> {
         match self {
             KbSwitcherCmd::Init { devices } => init(devices),
             KbSwitcherCmd::UpdateLayouts => update_layouts(),
@@ -105,10 +105,11 @@ impl KbSwitcherCmd {
     }
 }
 
-fn init(devices: &[String]) -> Result<(), Box<dyn Error>> {
+fn init(devices: &[String]) -> std::io::Result<()> {
     let layouts = load_layouts_from_hyprconf()?;
     let time = std::time::SystemTime::now()
-        .duration_since(UNIX_EPOCH)?
+        .duration_since(UNIX_EPOCH)
+        .expect("UNIX epoch must be earlier than current time!")
         .as_secs_f64();
 
     let data = Data {
@@ -125,16 +126,17 @@ fn init(devices: &[String]) -> Result<(), Box<dyn Error>> {
     dump_data(data)
 }
 
-fn update_layouts() -> Result<(), Box<dyn Error>> {
+fn update_layouts() -> std::io::Result<()> {
     let layouts = load_layouts_from_hyprconf()?;
     let mut data = load_data()?;
     data.layouts = (0..layouts.len()).collect();
     dump_data(data)
 }
 
-fn switch() -> Result<(), Box<dyn Error>> {
+fn switch() -> std::io::Result<()> {
     let press_time = std::time::SystemTime::now()
-        .duration_since(UNIX_EPOCH)?
+        .duration_since(UNIX_EPOCH)
+        .expect("UNIX epoch must be earlier than current time!")
         .as_secs_f64();
     let mut data = load_data()?;
     compute_time_and_counter(press_time, &mut data);
@@ -154,7 +156,7 @@ fn switch() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-fn add_device(device_name: &String) -> Result<(), Box<dyn Error>> {
+fn add_device(device_name: &String) -> std::io::Result<()> {
     let mut data = load_data()?;
     let available_keyboards = load_keyboards()?;
 
@@ -173,7 +175,7 @@ fn add_device(device_name: &String) -> Result<(), Box<dyn Error>> {
     dump_data(data)
 }
 
-fn remove_device(device_name: &String) -> Result<(), Box<dyn Error>> {
+fn remove_device(device_name: &String) -> std::io::Result<()> {
     let mut data = load_data()?;
 
     if let Some((i, _)) = data
@@ -246,7 +248,7 @@ fn switch_layout_for(
         .spawn()
 }
 
-fn load_layouts_from_hyprconf() -> Result<Vec<String>, Box<dyn Error>> {
+fn load_layouts_from_hyprconf() -> std::io::Result<Vec<String>> {
     let output = Command::new("hyprctl")
         .args(["getoption", "input:kb_layout", "-j"])
         .output()?
@@ -260,7 +262,7 @@ fn load_layouts_from_hyprconf() -> Result<Vec<String>, Box<dyn Error>> {
         .collect())
 }
 
-fn load_keyboards() -> Result<Vec<String>, Box<dyn Error>> {
+fn load_keyboards() -> std::io::Result<Vec<String>> {
     let output = Command::new("hyprctl")
         .args(["devices", "-j"])
         .output()?
@@ -280,16 +282,16 @@ fn load_keyboards() -> Result<Vec<String>, Box<dyn Error>> {
     Ok(keyboards)
 }
 
-fn dump_data(data: Data) -> Result<(), Box<dyn Error>> {
+fn dump_data(data: Data) -> std::io::Result<()> {
     let mut file = std::fs::File::create(&*DATA_STORAGE)?;
-    Ok(file.write_all(
+    file.write_all(
         serde_json::to_string(&data)
             .expect("Something wrong happened when serializes from Data to string")
             .as_bytes(),
-    )?)
+    )
 }
 
-fn load_data() -> Result<Data, Box<dyn Error>> {
+fn load_data() -> std::io::Result<Data> {
     let file = std::fs::File::open(&*DATA_STORAGE)?;
     let reader = std::io::BufReader::new(file);
     Ok(serde_json::from_reader(reader)?)
