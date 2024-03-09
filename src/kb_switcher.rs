@@ -292,6 +292,14 @@ fn dump_data(data: Data) -> std::io::Result<()> {
 }
 
 fn load_data() -> std::io::Result<Data> {
+    if !std::path::Path::exists(&DATA_STORAGE) {
+        eprintln!(
+            "File at {} doesn't exists!\nMaybe you need to initialize data using command 'init'.",
+            DATA_STORAGE.to_string_lossy()
+        );
+        std::process::exit(1);
+    }
+
     let file = std::fs::File::open(&*DATA_STORAGE)?;
     let reader = std::io::BufReader::new(file);
     Ok(serde_json::from_reader(reader)?)
