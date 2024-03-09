@@ -30,7 +30,7 @@ input {
     kb_option = grp:win_space_toggle
 }
 
-# You must don't use it, when the bint is defined above.
+# You must don't use it, when the bind is defined above.
 # bind = SUPER,SPACE,exec,kb_switcher switch
 ```
 
