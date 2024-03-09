@@ -6,40 +6,33 @@ It script will help you, because it based on concept, which uses on MacOS: it sw
 
 ## Restricts
 
-Because of Hyprland implementation, you can't switch language layout for all devices. I know, you can, but in needs to make a lot of calls, so I don't want make program so slow. So, there are two stages of script:
+Because of Hyprland implementation, you can't switch layouts for all devices together. It may be annoying, if you use laptop and external keyboard as well. So, this program takes it into account and provide possibility switching for all selected devices. But, only for these devices, which uses default option of `kb_layout`, which is defined in `input:kb_layout`. For example, in hyprland.conf:
 
-- Initialization
-- Switching
+```conf
+input {
+    kb_layout = us,ru,by
+}
+```
 
-The Initialization means loading default layout, which you can get, using command:
+When your device (mostly keyboard) have specific option `kb_layout`, the program may be work not correct as you want.
+
+Why? Because I get only the option using command:
 
 ```bash
 hyprctl getoption input:kb_layout
 ```
 
-> __NOTE__
-> I loads the layouts not for getting names, but count. The `hyprctl switchxkblayout` provide switching using indices and I use it.
+Also, you can't use the same bind, which you already defined in `kb_option` in input section of hyprland.conf file. For example, in hyprland.conf:
 
-And it stores as data in JSON format to file at `$XDG_DATA_HOME/layout_switcher/data` or `$HOME/.local/share/layout_switcher/data`, if the environment variable `$XDG_DATA_HOME` is not present. You can see it after processing this command via:
+```conf
+input {
+    kb_layout = us,ru,by
+    kb_option = grp:win_space_toggle
+}
 
-```bash
-cat $XDG_DATA_HOME/layout_switcher/data
-# or
-cat $HOME/.local/share/layout_switcher/data
+# You must don't use it, when the bint is defined above.
+# bind = SUPER,SPACE,exec,kb_switcher switch
 ```
-
-The Switching is a process, when layout switches to another. And the main restrict is need to use device name for it. Unfourtenately, Hyprland doesn't provide global layout switching, so need **force** set device name, when you switches.
-
-For example:
-
-```bash
-./kb_switcher switch keychron-keychron-k3
-```
-
-> __NOTE__
-> Also it's mean that you must not to set the custom layout set for specific devicee. It's guaranteed to cause UB (Undefined Behavior).
-
-I know about batching, which `hyprctl` provides, but it very-very expensive call for all devices, so I decline it.
 
 ## Usage
 
@@ -60,9 +53,17 @@ And enjoy with application!
 > __NOTE__
 > If you want set another name of application, you can change it in Cargo.toml file: rename the package name, which placet at second line from top.
 
+You can see all command using `help`, and their documentation. For example:
+
+```bash
+kb_switcher help init
+```
+
+It'll print in output the documentation of this command. Please, read it before using commads.
+
 ## Contribution
 
-If you have some issues, or have better implementation, that I have, I'm open to contribution! Open issue or make PR, if you sure about problem.
+If you have an issue or want to make this application more better, the issue and PR page is open for you!
 
 ## License
 
