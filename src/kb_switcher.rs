@@ -1,4 +1,5 @@
-use clap::Parser;
+use clap::{CommandFactory, Parser};
+use clap_complete::{generate, Shell};
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -41,7 +42,7 @@ struct Data {
 /// Simple program, which can switch keyboard layout more comfotrable
 /// in Hyprland, like on MacOS.
 #[derive(Parser, Debug)]
-#[command(version, about)]
+#[command(version, about, name = env!("CARGO_PKG_NAME"))]
 pub enum KbSwitcherCmd {
     /// Initializes storage data with device names.
     ///
@@ -50,7 +51,9 @@ pub enum KbSwitcherCmd {
     /// $XDG_DATA_HOME/kb_switcher/data or $HOME/.local/share/kb_switcher/data.
     ///
     /// Must be called before all the other commands!
-    Init { devices: Vec<String> },
+    Init {
+        devices: Vec<String>,
+    },
 
     /// Updates layouts in the data file without other actions.
     ///
@@ -67,14 +70,23 @@ pub enum KbSwitcherCmd {
     ///
     /// Note: the device name must be correct. You can get the name
     /// using command 'hyprctl devices'.
-    AddDevice { device_name: String },
+    AddDevice {
+        device_name: String,
+    },
 
     /// Removes matching device from data file.
     ///
     /// Note: the device must be correct. You can get the name from
     /// file, which is placed at $XDG_DATA_HOME/kb_switcher/data
     /// or $HOME/.local/share/kb_switcher/data.
-    RemoveDevice { device_name: String },
+    RemoveDevice {
+        device_name: String,
+    },
+
+    // Generate shell completion script
+    Completion {
+        shell: Option<Shell>,
+    },
 }
 
 impl KbSwitcherCmd {
@@ -85,6 +97,7 @@ impl KbSwitcherCmd {
             KbSwitcherCmd::Switch => switch(),
             KbSwitcherCmd::AddDevice { device_name } => add_device(device_name),
             KbSwitcherCmd::RemoveDevice { device_name } => remove_device(device_name),
+            KbSwitcherCmd::Completion { shell } => Ok(print_completion(shell)),
         }
     }
 }
@@ -160,6 +173,17 @@ fn remove_device(device_name: &String) -> Result<(), Box<dyn Error>> {
     }
 
     dump_data(data)
+}
+
+fn print_completion(shell: &Option<Shell>) {
+    let mut cmd = KbSwitcherCmd::command();
+    let name = cmd.get_name().to_string();
+    generate(
+        shell.unwrap_or(Shell::Bash),
+        &mut cmd,
+        name,
+        &mut std::io::stdout(),
+    );
 }
 
 fn compute_time_and_counter(press_time: f64, data: &mut Data) {
