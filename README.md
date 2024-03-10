@@ -27,11 +27,11 @@ Also, you can't use the same bind, which you already defined in `kb_option` in i
 ```conf
 input {
     kb_layout = us,ru,by
-    kb_option = grp:win_space_toggle
+    # You must don't use it, when the bind below is same.
+    # kb_option = grp:win_space_toggle
 }
 
-# You must don't use it, when the bind is defined above.
-# bind = SUPER,SPACE,exec,kb_switcher switch
+bind = SUPER,SPACE,exec,kb_switcher switch
 ```
 
 ## Usage
