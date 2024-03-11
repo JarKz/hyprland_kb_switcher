@@ -9,7 +9,7 @@ use hyprland::{
 };
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
-use std::{io::Write, path::PathBuf, time::UNIX_EPOCH};
+use std::{future::Future, io::Write, path::PathBuf, time::UNIX_EPOCH};
 
 static DATA_PATH: Lazy<PathBuf> = Lazy::new(|| {
     let mut data_path = match std::env::var("XDG_DATA_HOME") {
@@ -91,10 +91,10 @@ pub enum KbSwitcherCmd {
 impl KbSwitcherCmd {
     pub async fn process(&self) -> Result<()> {
         match self {
-            KbSwitcherCmd::Init { devices } => init(devices),
-            KbSwitcherCmd::UpdateLayouts => update_layouts(),
+            KbSwitcherCmd::Init { devices } => init(devices).await,
+            KbSwitcherCmd::UpdateLayouts => update_layouts().await,
             KbSwitcherCmd::Switch => switch().await,
-            KbSwitcherCmd::AddDevice { device_name } => add_device(device_name),
+            KbSwitcherCmd::AddDevice { device_name } => add_device(device_name).await,
             KbSwitcherCmd::RemoveDevice { device_name } => remove_device(device_name),
             KbSwitcherCmd::ListDevices => list_devices(),
             KbSwitcherCmd::Completion { shell } => {
@@ -105,12 +105,15 @@ impl KbSwitcherCmd {
     }
 }
 
-fn init(devices: &[String]) -> Result<()> {
-    let layouts = load_layouts_from_hyprconf()?;
+async fn init(devices: &[String]) -> Result<()> {
+    let future_layouts = Keyword::get_async("input:kb_layout");
     let time = std::time::SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .expect("UNIX epoch must be earlier than current time!")
         .as_secs_f64();
+    std::fs::create_dir_all(&*DATA_PATH)?;
+
+    let layouts = load_layouts_from_hyprconf(future_layouts).await?;
 
     let data = Data {
         devices: devices.to_owned(),
@@ -122,14 +125,15 @@ fn init(devices: &[String]) -> Result<()> {
         counter: 0,
     };
 
-    std::fs::create_dir_all(&*DATA_PATH)?;
     dump_data(data)?;
     Ok(())
 }
 
-fn update_layouts() -> Result<()> {
-    let layouts = load_layouts_from_hyprconf()?;
+async fn update_layouts() -> Result<()> {
+    let future_layouts = Keyword::get_async("input:kb_layout");
     let mut data = load_data()?;
+
+    let layouts = load_layouts_from_hyprconf(future_layouts).await?;
     data.layouts = (0..layouts.len()).collect();
     dump_data(data)?;
     Ok(())
@@ -163,9 +167,11 @@ async fn switch() -> Result<()> {
     Ok(())
 }
 
-fn add_device(device_name: &String) -> Result<()> {
+async fn add_device(device_name: &String) -> Result<()> {
+    let future_devices = Devices::get_async();
     let mut data = load_data()?;
-    let available_keyboards = Devices::get()?.keyboards;
+
+    let available_keyboards = future_devices.await?.keyboards;
 
     if !available_keyboards
         .iter()
@@ -262,8 +268,10 @@ fn handle_press(data: &mut Data) {
     }
 }
 
-fn load_layouts_from_hyprconf() -> Result<Vec<String>> {
-    match Keyword::get("input:kb_layout")?.value {
+async fn load_layouts_from_hyprconf(
+    future_layouts: impl Future<Output = Result<Keyword>>,
+) -> Result<Vec<String>> {
+    match future_layouts.await?.value {
         OptionValue::String(s) => Ok(s.split(',').map(|layout| layout.to_string()).collect()),
         _ => {
             eprintln!("Something went wrong during getting option input:kb_layout. The given value is another than String type. Please check your config and report it to developer.");
