@@ -148,11 +148,11 @@ async fn switch() -> Result<()> {
     let mut processes = vec![];
     for keyboard in Devices::get()?
         .keyboards
-        .iter()
+        .into_iter()
         .filter(|keyboard| data.devices.contains(&keyboard.name))
     {
         let data = switch_xkb_layout::SwitchXKBLayoutCmdTypes::Id(layout_id as u8);
-        processes.push(switch_xkb_layout::call_async(keyboard.name.clone(), data));
+        processes.push(switch_xkb_layout::call_async(keyboard.name, data));
     }
 
     dump_data(data)?;
