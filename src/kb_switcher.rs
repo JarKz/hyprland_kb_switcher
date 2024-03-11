@@ -32,8 +32,6 @@ static DATA_STORAGE: Lazy<PathBuf> = Lazy::new(|| {
     other_path
 });
 
-const MAX_DURATION: f64 = 0.3;
-
 #[derive(Serialize, Deserialize)]
 struct Data {
     devices: Vec<String>,
@@ -43,6 +41,38 @@ struct Data {
     cur_all: usize,
     sum_time: f64,
     counter: u8,
+
+    #[serde(default)]
+    max_duration: Duration,
+}
+
+#[derive(Serialize, Deserialize)]
+struct Duration(f64);
+
+impl Duration {
+    const DEFAULT_MAX_DURATION: f64 = 0.4;
+    const MIN: f64 = 0.2;
+    const MAX: f64 = 1.0;
+
+    fn satisfies(&self, time: f64) -> bool {
+        time < self.0
+    }
+
+    fn valid(time: f64) -> bool {
+        (Self::MIN..=Self::MAX).contains(&time)
+    }
+}
+
+impl Default for Duration {
+    fn default() -> Self {
+        Duration(Self::DEFAULT_MAX_DURATION)
+    }
+}
+
+impl std::fmt::Display for Duration {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
 }
 
 /// Simple program, which can switch keyboard layout more comfotrable
@@ -84,6 +114,18 @@ pub enum KbSwitcherCmd {
     /// Prints all stored device names.
     ListDevices,
 
+    /// Sets the max duration between two keypresses for triggering to pick another language.
+    ///
+    /// Use a value from range [0.2; 1.0], where brackets means inclusive range.
+    /// Incorrect value will be immediately declined.
+    ///
+    /// 'Between two keypresses' means from first press and third press, after which turning to
+    /// another (not last used) language.
+    SetKeypressDuration { duration: f64 },
+
+    /// Prints the current max keypress duration.
+    KeypressDuration,
+
     /// Generate shell completion script;
     Completion { shell: Option<Shell> },
 }
@@ -97,6 +139,8 @@ impl KbSwitcherCmd {
             KbSwitcherCmd::AddDevice { device_name } => add_device(device_name).await,
             KbSwitcherCmd::RemoveDevice { device_name } => remove_device(device_name),
             KbSwitcherCmd::ListDevices => list_devices(),
+            KbSwitcherCmd::SetKeypressDuration { duration } => set_keypress_duration(duration),
+            KbSwitcherCmd::KeypressDuration => print_keypress_duration(),
             KbSwitcherCmd::Completion { shell } => {
                 print_completion(shell);
                 Ok(())
@@ -141,6 +185,7 @@ async fn init(devices: &[String]) -> Result<()> {
         cur_all: 0,
         sum_time: 0.0,
         counter: 0,
+        max_duration: Default::default(),
     };
 
     dump_data(data)?;
@@ -240,6 +285,22 @@ fn list_devices() -> Result<()> {
     Ok(())
 }
 
+fn set_keypress_duration(&duration: &f64) -> Result<()> {
+    if !Duration::valid(duration) {
+        eprintln!("The selected keypress duration is too strange! Please, set a number from range [0.2, 1.0].\nYour selected duration: {}", duration);
+        std::process::exit(1);
+    }
+    let mut data = load_data()?;
+    data.max_duration = Duration(duration);
+    Ok(dump_data(data)?)
+}
+
+fn print_keypress_duration() -> Result<()> {
+    let data = load_data()?;
+    println!("The current max keypress duration: {}", data.max_duration);
+    Ok(())
+}
+
 fn print_completion(shell: &Option<Shell>) {
     let mut cmd = KbSwitcherCmd::command();
     let name = cmd.get_name().to_string();
@@ -257,7 +318,7 @@ fn compute_time_and_counter(press_time: f64, data: &mut Data) {
 
     data.sum_time += diff;
 
-    if data.sum_time < MAX_DURATION {
+    if data.max_duration.satisfies(data.sum_time) {
         data.counter += 1;
     } else {
         data.sum_time = 0.0;
