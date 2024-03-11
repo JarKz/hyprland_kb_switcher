@@ -140,6 +140,8 @@ async fn update_layouts() -> Result<()> {
 }
 
 async fn switch() -> Result<()> {
+    let future_devices = Devices::get_async();
+
     let press_time = std::time::SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .expect("UNIX epoch must be earlier than current time!")
@@ -150,7 +152,8 @@ async fn switch() -> Result<()> {
 
     let layout_id = data.layouts[data.cur_freq];
     let mut processes = vec![];
-    for keyboard in Devices::get()?
+    for keyboard in future_devices
+        .await?
         .keyboards
         .into_iter()
         .filter(|keyboard| data.devices.contains(&keyboard.name))
