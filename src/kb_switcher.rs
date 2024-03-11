@@ -32,7 +32,7 @@ static DATA_STORAGE: Lazy<PathBuf> = Lazy::new(|| {
     other_path
 });
 
-const MAX_DURATION: f64 = 0.5;
+const MAX_DURATION: f64 = 0.3;
 
 #[derive(Serialize, Deserialize)]
 struct Data {
