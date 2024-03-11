@@ -1,7 +1,7 @@
 use clap::{CommandFactory, Parser};
 use clap_complete::{generate, Shell};
 use hyprland::{
-    ctl,
+    ctl::switch_xkb_layout,
     data::Devices,
     keyword::{Keyword, OptionValue},
     shared::HyprData,
@@ -89,11 +89,11 @@ pub enum KbSwitcherCmd {
 }
 
 impl KbSwitcherCmd {
-    pub fn process(&self) -> Result<()> {
+    pub async fn process(&self) -> Result<()> {
         match self {
             KbSwitcherCmd::Init { devices } => init(devices),
             KbSwitcherCmd::UpdateLayouts => update_layouts(),
-            KbSwitcherCmd::Switch => switch(),
+            KbSwitcherCmd::Switch => switch().await,
             KbSwitcherCmd::AddDevice { device_name } => add_device(device_name),
             KbSwitcherCmd::RemoveDevice { device_name } => remove_device(device_name),
             KbSwitcherCmd::ListDevices => list_devices(),
@@ -135,7 +135,7 @@ fn update_layouts() -> Result<()> {
     Ok(())
 }
 
-fn switch() -> Result<()> {
+async fn switch() -> Result<()> {
     let press_time = std::time::SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .expect("UNIX epoch must be earlier than current time!")
@@ -145,16 +145,21 @@ fn switch() -> Result<()> {
     handle_press(&mut data);
 
     let layout_id = data.layouts[data.cur_freq];
+    let mut processes = vec![];
     for keyboard in Devices::get()?
         .keyboards
         .iter()
         .filter(|keyboard| data.devices.contains(&keyboard.name))
     {
-        let data = ctl::switch_xkb_layout::SwitchXKBLayoutCmdTypes::Id(layout_id as u8);
-        ctl::switch_xkb_layout::call(keyboard.name.clone(), data)?;
+        let data = switch_xkb_layout::SwitchXKBLayoutCmdTypes::Id(layout_id as u8);
+        processes.push(switch_xkb_layout::call_async(keyboard.name.clone(), data));
     }
 
     dump_data(data)?;
+
+    for process in processes {
+        process.await?;
+    }
     Ok(())
 }
 
