@@ -34,7 +34,7 @@ input {
 bind = SUPER,SPACE,exec,kb_switcher switch
 ```
 
-## Usage
+## Installation 
 
 Firstly, make sure that you have last updated rust tools. You can download it from official site, or update to last version using command:
 
@@ -42,16 +42,28 @@ Firstly, make sure that you have last updated rust tools. You can download it fr
 rustup update
 ```
 
-And install application using command:
+### From Git
+
+Install application using command:
 
 ```bash
-cargo install --path .
+cargo install --git https://github.com/jarkz/hyprland_kb_switcher
 ```
 
-And enjoy with application!
+### Locally
+
+Use it way only if you need to make some simple changes: application name, optimization level, testing or something else.
+
+Clone this repository to your local machine and use command:
+
+```bash
+cargo install --path path/to/hyprland_kb_switcher
+```
 
 > __NOTE__
 > If you want set another name of application, you can change it in Cargo.toml file: rename the package name, which placet at second line from top.
+
+## Usage
 
 You can see all command using `help`, and their documentation. For example:
 
@@ -59,7 +71,24 @@ You can see all command using `help`, and their documentation. For example:
 kb_switcher help init
 ```
 
-It'll print in output the documentation of this command. Please, read it before using commads.
+It'll print in output the documentation of this command. Please, read all manuals before using commads, there is many details and explanations, which can help you.
+
+Simple usage:
+
+```bash
+kb_switcher init your-first-keyboard-name your-second-keyboard-name
+```
+
+In your hyprland.conf:
+
+```conf
+bind = SUPER,SPACE,exec,kb_switcher switch
+```
+
+And you can switch it between three or more languages in more pleasant way.
+
+> __NOTE__
+> If you forgot about adding one more keyboard into kb_switcher, there is a command 'add-device' and it's antipode - 'remove-device'. For list of current added devices - 'list-devices'.
 
 ## Contribution
 
