@@ -1,9 +1,15 @@
 use clap::{CommandFactory, Parser};
 use clap_complete::{generate, Shell};
+use hyprland::{
+    ctl,
+    data::Devices,
+    keyword::{Keyword, OptionValue},
+    shared::HyprData,
+    Result,
+};
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
-use std::{io::Write, path::PathBuf, process::Command, time::UNIX_EPOCH};
+use std::{io::Write, path::PathBuf, time::UNIX_EPOCH};
 
 static DATA_PATH: Lazy<PathBuf> = Lazy::new(|| {
     let mut data_path = match std::env::var("XDG_DATA_HOME") {
@@ -78,12 +84,12 @@ pub enum KbSwitcherCmd {
     /// Prints all stored device names.
     ListDevices,
 
-    /// Generate shell completion script
+    /// Generate shell completion script;
     Completion { shell: Option<Shell> },
 }
 
 impl KbSwitcherCmd {
-    pub fn process(&self) -> std::io::Result<()> {
+    pub fn process(&self) -> Result<()> {
         match self {
             KbSwitcherCmd::Init { devices } => init(devices),
             KbSwitcherCmd::UpdateLayouts => update_layouts(),
@@ -99,7 +105,7 @@ impl KbSwitcherCmd {
     }
 }
 
-fn init(devices: &[String]) -> std::io::Result<()> {
+fn init(devices: &[String]) -> Result<()> {
     let layouts = load_layouts_from_hyprconf()?;
     let time = std::time::SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -117,17 +123,19 @@ fn init(devices: &[String]) -> std::io::Result<()> {
     };
 
     std::fs::create_dir_all(&*DATA_PATH)?;
-    dump_data(data)
+    dump_data(data)?;
+    Ok(())
 }
 
-fn update_layouts() -> std::io::Result<()> {
+fn update_layouts() -> Result<()> {
     let layouts = load_layouts_from_hyprconf()?;
     let mut data = load_data()?;
     data.layouts = (0..layouts.len()).collect();
-    dump_data(data)
+    dump_data(data)?;
+    Ok(())
 }
 
-fn switch() -> std::io::Result<()> {
+fn switch() -> Result<()> {
     let press_time = std::time::SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .expect("UNIX epoch must be earlier than current time!")
@@ -137,39 +145,43 @@ fn switch() -> std::io::Result<()> {
     handle_press(&mut data);
 
     let layout_id = data.layouts[data.cur_freq];
-    let mut childs = Vec::with_capacity(data.devices.len());
-    for dev_name in &data.devices {
-        childs.push(switch_layout_for(dev_name.clone(), layout_id));
+    for keyboard in Devices::get()?
+        .keyboards
+        .iter()
+        .filter(|keyboard| data.devices.contains(&keyboard.name))
+    {
+        let data = ctl::switch_xkb_layout::SwitchXKBLayoutCmdTypes::Id(layout_id as u8);
+        ctl::switch_xkb_layout::call(keyboard.name.clone(), data)?;
     }
 
     dump_data(data)?;
-
-    for child in childs {
-        child?.wait()?;
-    }
     Ok(())
 }
 
-fn add_device(device_name: &String) -> std::io::Result<()> {
+fn add_device(device_name: &String) -> Result<()> {
     let mut data = load_data()?;
-    let available_keyboards = load_keyboards()?;
+    let available_keyboards = Devices::get()?.keyboards;
 
-    if !available_keyboards.contains(device_name) {
+    if !available_keyboards
+        .iter()
+        .any(|keyboard| keyboard.name == *device_name)
+    {
         eprintln!(
             "The given keyboard name is incorrect! Available keyboards: {}",
             available_keyboards
                 .iter()
-                .map(|keyboard| "\n- ".to_string() + keyboard)
+                .map(|keyboard| "\n- ".to_string() + &keyboard.name)
                 .collect::<String>()
         );
         std::process::exit(1);
     }
 
     data.devices.push(device_name.clone());
-    dump_data(data)
+    dump_data(data)?;
+    Ok(())
 }
 
-fn remove_device(device_name: &String) -> std::io::Result<()> {
+fn remove_device(device_name: &String) -> Result<()> {
     let mut data = load_data()?;
 
     if let Some((i, _)) = data
@@ -184,7 +196,7 @@ fn remove_device(device_name: &String) -> std::io::Result<()> {
     Ok(())
 }
 
-fn list_devices() -> std::io::Result<()> {
+fn list_devices() -> Result<()> {
     let data = load_data()?;
     println!(
         "Current stored devices:{}",
@@ -245,47 +257,14 @@ fn handle_press(data: &mut Data) {
     }
 }
 
-fn switch_layout_for(
-    device: String,
-    layout_id: usize,
-) -> Result<std::process::Child, std::io::Error> {
-    Command::new("hyprctl")
-        .args(["switchxkblayout", &device, &layout_id.to_string()])
-        .spawn()
-}
-
-fn load_layouts_from_hyprconf() -> std::io::Result<Vec<String>> {
-    let output = Command::new("hyprctl")
-        .args(["getoption", "input:kb_layout", "-j"])
-        .output()?
-        .stdout;
-    let data: Value = serde_json::from_slice(&output).expect("Must be captured output!");
-    Ok(data["str"]
-        .as_str()
-        .expect("The keyboard layouts must be available!")
-        .split(',')
-        .map(|s| s.to_string())
-        .collect())
-}
-
-fn load_keyboards() -> std::io::Result<Vec<String>> {
-    let output = Command::new("hyprctl")
-        .args(["devices", "-j"])
-        .output()?
-        .stdout;
-    let data: Value = serde_json::from_slice(&output).expect("Must be captured output!");
-    let keyboards: Vec<String> = data["keyboards"]
-        .as_array()
-        .expect("Must be array of keyboards!")
-        .iter()
-        .map(|keyboard| {
-            keyboard["name"]
-                .as_str()
-                .expect("The keyboard name must be string!")
-                .to_string()
-        })
-        .collect();
-    Ok(keyboards)
+fn load_layouts_from_hyprconf() -> Result<Vec<String>> {
+    match Keyword::get("input:kb_layout")?.value {
+        OptionValue::String(s) => Ok(s.split(',').map(|layout| layout.to_string()).collect()),
+        _ => {
+            eprintln!("Something went wrong during getting option input:kb_layout. The given value is another than String type. Please check your config and report it to developer.");
+            std::process::exit(1);
+        }
+    }
 }
 
 fn dump_data(data: Data) -> std::io::Result<()> {

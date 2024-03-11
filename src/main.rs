@@ -3,7 +3,7 @@ use kb_switcher::KbSwitcherCmd;
 
 use clap::Parser;
 
-fn main() -> std::io::Result<()> {
+fn main() -> hyprland::Result<()> {
     let command = KbSwitcherCmd::parse();
     command.process()
 }
