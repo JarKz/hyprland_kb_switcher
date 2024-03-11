@@ -107,6 +107,7 @@ impl KbSwitcherCmd {
 
 async fn init(devices: &[String]) -> Result<()> {
     let future_layouts = Keyword::get_async("input:kb_layout");
+    let available_devices = Devices::get_async();
     let time = std::time::SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .expect("UNIX epoch must be earlier than current time!")
@@ -115,8 +116,25 @@ async fn init(devices: &[String]) -> Result<()> {
 
     let layouts = load_layouts_from_hyprconf(future_layouts).await?;
 
+    let available_keyboards: std::collections::HashSet<String> = available_devices
+        .await?
+        .keyboards
+        .into_iter()
+        .map(|kb| kb.name)
+        .collect();
+
+    let mut used_devices = vec![];
+    for device in devices {
+        if available_keyboards.contains(device) {
+            used_devices.push(device.to_owned());
+            continue;
+        }
+
+        eprintln!("The keyboard name is invalid: {} (skipped).\n", device);
+    }
+
     let data = Data {
-        devices: devices.to_owned(),
+        devices: used_devices,
         last_time: time,
         layouts: (0..layouts.len()).collect(),
         cur_freq: 0,
