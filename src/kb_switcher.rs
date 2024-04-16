@@ -126,7 +126,7 @@ pub enum DeviceCmd {
 }
 
 impl DeviceCmd {
-    pub async fn process(&self) -> Result<()> {
+    pub async fn handle(&self) -> Result<()> {
         match self {
             DeviceCmd::List => list_devices(),
             DeviceCmd::Add { device_name } => add_device(device_name).await,
@@ -136,13 +136,13 @@ impl DeviceCmd {
 }
 
 impl KbSwitcherCmd {
-    pub async fn process(&self) -> Result<()> {
+    pub async fn handle(&self) -> Result<()> {
         match self {
             KbSwitcherCmd::Init { devices } => init(devices).await,
             KbSwitcherCmd::UpdateLayouts => update_layouts().await,
             KbSwitcherCmd::Switch => switch().await,
-            KbSwitcherCmd::Device(cmd) => cmd.process().await,
-            KbSwitcherCmd::KeypressDuration { duration } => process_kp_duration(duration),
+            KbSwitcherCmd::Device(cmd) => cmd.handle().await,
+            KbSwitcherCmd::KeypressDuration { duration } => handle_keypress_duration(duration),
             KbSwitcherCmd::Completion { shell } => {
                 print_completion(shell);
                 Ok(())
@@ -287,7 +287,7 @@ fn list_devices() -> Result<()> {
     Ok(())
 }
 
-fn process_kp_duration(duration: &Option<f64>) -> Result<()> {
+fn handle_keypress_duration(duration: &Option<f64>) -> Result<()> {
     match duration {
         Some(duration) => set_keypress_duration(duration),
         None => print_keypress_duration(),
