@@ -7,30 +7,11 @@ use hyprland::{
     shared::HyprData,
     Result,
 };
-use once_cell::sync::Lazy;
+
 use serde::{Deserialize, Serialize};
-use std::{future::Future, io::Write, path::PathBuf, time::UNIX_EPOCH};
+use std::{future::Future, time::UNIX_EPOCH};
 
-static DATA_PATH: Lazy<PathBuf> = Lazy::new(|| {
-    let mut data_path = match std::env::var("XDG_DATA_HOME") {
-        Ok(path) => PathBuf::from(path),
-        Err(_) => {
-            let mut other_path =
-                PathBuf::from(std::env::var("HOME").expect("Must be HOME env variable!"));
-            other_path.push(".local");
-            other_path.push("share");
-            other_path
-        }
-    };
-    data_path.push("kb_switcher");
-    data_path
-});
-
-static DATA_STORAGE: Lazy<PathBuf> = Lazy::new(|| {
-    let mut other_path = DATA_PATH.clone();
-    other_path.push("data");
-    other_path
-});
+mod data;
 
 #[derive(Serialize, Deserialize)]
 struct Data {
@@ -156,7 +137,7 @@ async fn init(devices: &[String]) -> Result<()> {
         .duration_since(UNIX_EPOCH)
         .expect("UNIX epoch must be earlier than current time!")
         .as_secs_f64();
-    std::fs::create_dir_all(&*DATA_PATH)?;
+    data::init()?;
 
     let layouts = load_layouts_from_hyprconf(future_layouts).await?;
 
@@ -188,17 +169,17 @@ async fn init(devices: &[String]) -> Result<()> {
         max_duration: Default::default(),
     };
 
-    dump_data(data)?;
+    data::dump(data)?;
     Ok(())
 }
 
 async fn update_layouts() -> Result<()> {
     let future_layouts = Keyword::get_async("input:kb_layout");
-    let mut data = load_data()?;
+    let mut data = data::load()?;
 
     let layouts = load_layouts_from_hyprconf(future_layouts).await?;
     data.layouts = (0..layouts.len()).collect();
-    dump_data(data)?;
+    data::dump(data)?;
     Ok(())
 }
 
@@ -209,7 +190,7 @@ async fn switch() -> Result<()> {
         .duration_since(UNIX_EPOCH)
         .expect("UNIX epoch must be earlier than current time!")
         .as_secs_f64();
-    let mut data = load_data()?;
+    let mut data = data::load()?;
     compute_time_and_counter(press_time, &mut data);
     handle_press(&mut data);
 
@@ -225,7 +206,7 @@ async fn switch() -> Result<()> {
         processes.push(switch_xkb_layout::call_async(keyboard.name, data));
     }
 
-    dump_data(data)?;
+    data::dump(data)?;
 
     for process in processes {
         process.await?;
@@ -235,7 +216,7 @@ async fn switch() -> Result<()> {
 
 async fn add_device(device_name: &String) -> Result<()> {
     let future_devices = Devices::get_async();
-    let mut data = load_data()?;
+    let mut data = data::load()?;
 
     let available_keyboards = future_devices.await?.keyboards;
 
@@ -254,12 +235,12 @@ async fn add_device(device_name: &String) -> Result<()> {
     }
 
     data.devices.push(device_name.clone());
-    dump_data(data)?;
+    data::dump(data)?;
     Ok(())
 }
 
 fn remove_device(device_name: &String) -> Result<()> {
-    let mut data = load_data()?;
+    let mut data = data::load()?;
 
     if let Some((i, _)) = data
         .devices
@@ -268,13 +249,13 @@ fn remove_device(device_name: &String) -> Result<()> {
         .find(|(_, dev)| *dev == device_name)
     {
         data.devices.remove(i);
-        dump_data(data)?;
+        data::dump(data)?;
     }
     Ok(())
 }
 
 fn list_devices() -> Result<()> {
-    let data = load_data()?;
+    let data = data::load()?;
     println!(
         "Current stored devices:{}",
         data.devices
@@ -290,13 +271,13 @@ fn set_keypress_duration(&duration: &f64) -> Result<()> {
         eprintln!("The selected keypress duration is too strange! Please, set a number from range [0.2, 1.0].\nYour selected duration: {}", duration);
         std::process::exit(1);
     }
-    let mut data = load_data()?;
+    let mut data = data::load()?;
     data.max_duration = Duration(duration);
-    Ok(dump_data(data)?)
+    Ok(data::dump(data)?)
 }
 
 fn print_keypress_duration() -> Result<()> {
-    let data = load_data()?;
+    let data = data::load()?;
     println!("The current max keypress duration: {}", data.max_duration);
     Ok(())
 }
@@ -360,31 +341,4 @@ async fn load_layouts_from_hyprconf(
             std::process::exit(1);
         }
     }
-}
-
-fn dump_data(data: Data) -> std::io::Result<()> {
-    let mut file = std::fs::File::create(&*DATA_STORAGE)?;
-    file.write_all(
-        serde_json::to_string(&data)
-            .expect("Something wrong happened when serializes from Data to string")
-            .as_bytes(),
-    )
-}
-
-fn load_data() -> std::io::Result<Data> {
-    let file = match std::fs::File::open(&*DATA_STORAGE) {
-        Ok(file) => file,
-        Err(error) => match error.kind() {
-            std::io::ErrorKind::NotFound => {
-                eprintln!(
-                    "File at {} doesn't exists!\nMaybe you need to initialize data using command 'init'.",
-                    DATA_STORAGE.to_string_lossy()
-                );
-                std::process::exit(1);
-            }
-            _ => return Err(error),
-        },
-    };
-    let reader = std::io::BufReader::new(file);
-    Ok(serde_json::from_reader(reader)?)
 }
