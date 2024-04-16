@@ -94,9 +94,7 @@ pub enum KbSwitcherCmd {
     /// Incorrect value will be immediately declined.
     ///
     /// To print just call command without values.
-    KeypressDuration {
-        duration: Option<f64>,
-    },
+    KeypressDuration { duration: Option<f64> },
 
     /// Generate shell completion script;
     Completion { shell: Option<Shell> },
@@ -105,7 +103,6 @@ pub enum KbSwitcherCmd {
 /// Subcommand for managing devices.
 #[derive(Subcommand, Debug)]
 pub enum DeviceCmd {
-
     /// Prints all stored device names.
     List,
 
@@ -113,16 +110,12 @@ pub enum DeviceCmd {
     ///
     /// Note: the device name must be correct, otherwise it won't add's into file.
     /// You can get the name using command 'hyprctl devices'.
-    Add {
-        device_name: String
-    },
+    Add { device_name: String },
 
     /// Removes matching device from the data file.
     ///
     /// You get the device name using command 'devices list'.
-    Remove {
-        device_name: String
-    }
+    Remove { device_name: String },
 }
 
 impl DeviceCmd {
