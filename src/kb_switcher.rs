@@ -1,4 +1,4 @@
-use clap::{CommandFactory, Parser};
+use clap::{CommandFactory, Parser, Subcommand};
 use clap_complete::{generate, Shell};
 use hyprland::{
     ctl::switch_xkb_layout,
@@ -70,6 +70,10 @@ pub enum KbSwitcherCmd {
     /// Must be called before all the other commands!
     Init { devices: Vec<String> },
 
+    /// Subcommand for managing devices.
+    #[command(subcommand)]
+    Device(DeviceCmd),
+
     /// Updates layouts in the data file without other actions.
     ///
     /// Uses, when you change the layout set in hyprland.conf.
@@ -80,20 +84,6 @@ pub enum KbSwitcherCmd {
     /// Switches the layouts for all devices, which you added in
     /// 'init' or 'add-device' command.
     Switch,
-
-    /// Adds a device into the data file.
-    ///
-    /// Note: the device name must be correct, otherwise it won't add's into file.
-    /// You can get the name using command 'hyprctl devices'.
-    AddDevice { device_name: String },
-
-    /// Removes matching device from the data file.
-    ///
-    /// You get the device name using command 'list-devices'.
-    RemoveDevice { device_name: String },
-
-    /// Prints all stored device names.
-    ListDevices,
 
     /// Sets the max duration between two keypresses for triggering to pick another language.
     ///
@@ -111,15 +101,46 @@ pub enum KbSwitcherCmd {
     Completion { shell: Option<Shell> },
 }
 
+/// Subcommand for managing devices.
+#[derive(Subcommand, Debug)]
+pub enum DeviceCmd {
+
+    /// Prints all stored device names.
+    List,
+
+    /// Adds a device into the data file.
+    ///
+    /// Note: the device name must be correct, otherwise it won't add's into file.
+    /// You can get the name using command 'hyprctl devices'.
+    Add {
+        device_name: String
+    },
+
+    /// Removes matching device from the data file.
+    ///
+    /// You get the device name using command 'list-devices'.
+    Remove {
+        device_name: String
+    }
+}
+
+impl DeviceCmd {
+    pub async fn process(&self) -> Result<()> {
+        match self {
+            DeviceCmd::List => list_devices(),
+            DeviceCmd::Add { device_name } => add_device(device_name).await,
+            DeviceCmd::Remove { device_name } => remove_device(device_name),
+        }
+    }
+}
+
 impl KbSwitcherCmd {
     pub async fn process(&self) -> Result<()> {
         match self {
             KbSwitcherCmd::Init { devices } => init(devices).await,
             KbSwitcherCmd::UpdateLayouts => update_layouts().await,
             KbSwitcherCmd::Switch => switch().await,
-            KbSwitcherCmd::AddDevice { device_name } => add_device(device_name).await,
-            KbSwitcherCmd::RemoveDevice { device_name } => remove_device(device_name),
-            KbSwitcherCmd::ListDevices => list_devices(),
+            KbSwitcherCmd::Device(cmd) => cmd.process().await,
             KbSwitcherCmd::SetKeypressDuration { duration } => set_keypress_duration(duration),
             KbSwitcherCmd::KeypressDuration => print_keypress_duration(),
             KbSwitcherCmd::Completion { shell } => {
