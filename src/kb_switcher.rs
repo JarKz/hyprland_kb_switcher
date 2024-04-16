@@ -85,17 +85,18 @@ pub enum KbSwitcherCmd {
     /// 'init' or 'device add' command.
     Switch,
 
-    /// Sets the max duration between two keypresses for triggering to pick another language.
+    /// The keypress duration between two presses for activating 'switch'.
     ///
-    /// Use a value from range [0.2; 1.0], where brackets means inclusive range.
+    /// 'Between two presses' means from first press and third press, after which turning to
+    /// another (not last used) layout.
+    ///
+    /// To set use a value from range [0.2; 1.0] (in seconds), where brackets means inclusive range.
     /// Incorrect value will be immediately declined.
     ///
-    /// 'Between two keypresses' means from first press and third press, after which turning to
-    /// another (not last used) language.
-    SetKeypressDuration { duration: f64 },
-
-    /// Prints the current max keypress duration.
-    KeypressDuration,
+    /// To print just call command without values.
+    KeypressDuration {
+        duration: Option<f64>,
+    },
 
     /// Generate shell completion script;
     Completion { shell: Option<Shell> },
@@ -141,8 +142,7 @@ impl KbSwitcherCmd {
             KbSwitcherCmd::UpdateLayouts => update_layouts().await,
             KbSwitcherCmd::Switch => switch().await,
             KbSwitcherCmd::Device(cmd) => cmd.process().await,
-            KbSwitcherCmd::SetKeypressDuration { duration } => set_keypress_duration(duration),
-            KbSwitcherCmd::KeypressDuration => print_keypress_duration(),
+            KbSwitcherCmd::KeypressDuration { duration } => process_kp_duration(duration),
             KbSwitcherCmd::Completion { shell } => {
                 print_completion(shell);
                 Ok(())
@@ -285,6 +285,13 @@ fn list_devices() -> Result<()> {
             .collect::<String>()
     );
     Ok(())
+}
+
+fn process_kp_duration(duration: &Option<f64>) -> Result<()> {
+    match duration {
+        Some(duration) => set_keypress_duration(duration),
+        None => print_keypress_duration(),
+    }
 }
 
 fn set_keypress_duration(&duration: &f64) -> Result<()> {
