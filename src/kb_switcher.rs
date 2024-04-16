@@ -82,7 +82,7 @@ pub enum KbSwitcherCmd {
     /// Switches the keyboard layouts like MacOS.
     ///
     /// Switches the layouts for all devices, which you added in
-    /// 'init' or 'add-device' command.
+    /// 'init' or 'device add' command.
     Switch,
 
     /// Sets the max duration between two keypresses for triggering to pick another language.
@@ -118,7 +118,7 @@ pub enum DeviceCmd {
 
     /// Removes matching device from the data file.
     ///
-    /// You get the device name using command 'list-devices'.
+    /// You get the device name using command 'devices list'.
     Remove {
         device_name: String
     }
