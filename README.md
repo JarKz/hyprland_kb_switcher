@@ -88,7 +88,7 @@ bind = SUPER,SPACE,exec,kb_switcher switch
 And you can switch it between three or more languages in more pleasant way.
 
 > __NOTE__
-> If you forgot about adding one more keyboard into kb_switcher, there is a command 'add-device' and it's antipode - 'remove-device'. For list of current added devices - 'list-devices'.
+> If you forgot about adding one more keyboard into kb_switcher, there is a command 'device add' and it's antipode - 'device remove'. For list of current added devices - 'device list'.
 
 ## Contribution
 
