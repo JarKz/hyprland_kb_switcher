@@ -85,10 +85,24 @@ pub enum KbSwitcherCmd {
     /// 'init' or 'device add' command.
     Switch,
 
-    /// The keypress duration between two presses for activating 'switch'.
+    /// The keypress duration of two switches in row for activating another (not last) layout.
     ///
-    /// 'Between two presses' means from first press and third press, after which turning to
-    /// another (not last used) layout.
+    /// To understand it, I introduce the 'sum time' of activating command 'switch' from last time.
+    /// Let's you activate command 'switch' at zero time and activate again after 200ms, then the
+    /// sum time is equal to 200ms. When you activates for the third time after 100ms (from the
+    /// last time), the sum time now equal to 300ms.
+    ///
+    /// It's important to understand the 'sum time' which is the backbone to determine significance
+    /// of change to another (not last) layout. And while the sum time is less than the keypress
+    /// duration, you can change to the another layout (again, not last).
+    ///
+    /// Note: changing to another layout after completing tho conditions:
+    /// 1. the sum time is less keypress duration;
+    /// 2. the count of calls the 'switch' command is greater than 1.
+    ///
+    /// Important note: the sum time will reset to zero when the count of calls the 'switch'
+    /// command exceeds 1 (equal to 2 or greater). So it means you can infinitely rotate the
+    /// layouts until the sum time is less than the keypress duration.
     ///
     /// To set use a value from range [0.2; 1.0] (in seconds), where brackets means inclusive range.
     /// Incorrect value will be immediately declined.
