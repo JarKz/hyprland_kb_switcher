@@ -4,6 +4,9 @@ If you use more than two languages, you know, that is not very comfort way. Espe
 
 It script will help you, because it based on concept, which uses on MacOS: it switches only two last languages if key combination presses only one time, but when combination presses more than one, then switches between all languages.
 
+> [!WARNING]
+> I'm not longer using Hyprland and the application will be unmaintained by me. But you still can contribute it via issue or pull-requests. Sorry for inconvenience.
+
 ## Restricts
 
 Because of Hyprland implementation, you can't switch layouts for all devices together. It may be annoying, if you use laptop and external keyboard as well. So, this program takes it into account and provide possibility switching for all selected devices. But, only for these devices, which uses default option of `kb_layout`, which is defined in `input:kb_layout`. For example, in hyprland.conf:
